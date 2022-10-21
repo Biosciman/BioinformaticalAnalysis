@@ -1,0 +1,5 @@
+family_Acetobacteraceae_otu1.fa
+family_Acetobacteraceae_otu2.fa
+family_Acetobacteraceae_otu3.fa
+family_Acetobacteraceae_otu4.fa
+family_Acetobacteraceae_otu5.fa
