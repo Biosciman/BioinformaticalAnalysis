@@ -1,0 +1,1 @@
+Ma Y, Guo Z, Xia B, Zhang Y, Liu X, Yu Y, Tang N, Tong X, Wang M, Ye X, Feng J, Chen Y, Wang J. Identification of antimicrobial peptides from the human gut microbiome using deep learning. Nat Biotechnol. 2022 Jun;40(6):921-931. doi: 10.1038/s41587-022-01226-0. Epub 2022 Mar 3. PMID: 35241840.
