@@ -1,0 +1,28 @@
+RNA-seq SOP
+-Prepare genome index
+$ bowtie-build genome.fa genome_index
+
+-Align sequence reads to the genome
+$ bowtie -S genome_index RNAseq.fq RNAseq.sam
+
+-Convert, Sort & Index
+$ samtools view -b -S RNAseq.sam -o RNAseq.bam
+$ samtools sort RNAseq.bam -o RNAseq.sorted.bam
+$ samtools index RNAseq.bam
+$ samtools tview RNAseq.bam genome
+
+Reformat GTF file
+$ perl -ne 's/(gene_name\s\"[\d|\w|-]+)(;)([\d|\w|-]+\")/$1.$3/; print' Aedes_aegypti_lvpagwg.AaegL5.52.gtf > corrected.gtf
+
+Splice-alignment against the genome
+$ tophat -p 3 --bowtie1 --no-novel-juncs --read-mismatches 2 -G corrected.gtf --transcriptome-index transcriptome_data_Aaegl5 --output-dir PBS_HD_1 index/AaegL5 PBS_HD_1.fq
+
+$ tophat -p 3 --bowtie1 --no-novel-juncs --read-mismatches 2 -G corrected.gtf --transcriptome-index DENV2_transcriptome_Aaegl5 --output-dir DENV2_HD_1 index/AaegL5 DENV2_HD_1.fq
+
+
+HTSeq-count
+$ samtools view -h -o accepted_hits.sam accepted_hits.bam
+$ htseq-count --stranded no -i gene_id accepted_hits.sam corrected.gtf > accepted_hits.gene.counts
+
+Measuring differential expression
+$ cuffdiff -o diff_out -p 2 -b GCF_002204515.2_AaegL5.0_genomic.fna -u corrected.gtf -L PBS,DENV2 PBS_HD_1/accepted_hits.bam DENV2_HD_1/accepted_hits.bam
