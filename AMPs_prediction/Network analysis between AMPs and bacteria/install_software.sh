@@ -1,3 +1,4 @@
+#!/bin/bash
 wget https://sourceforge.net/projects/samtools/files/samtools/1.7/samtools-1.7.tar.bz2/download -O samtools-1.7.tar.bz2
 wget https://sourceforge.net/projects/samtools/files/samtools/1.7/htslib-1.7.tar.bz2/download -O htslib-1.7.tar.bz2
 tar jxvf htslib-1.7.tar.bz2
