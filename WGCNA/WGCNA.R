@@ -125,6 +125,8 @@ mergedColors = labels2colors(net$colors)
 table(mergedColors)
 # Plot the dendrogram and the module colors underneath
 # plotDendroAndColors函数，它接受一个聚类的对象，以及该对象里面包含的所有个体所对应的颜色。
+# 灰色默认是无法归类于任何模块的那些基因
+# 如果灰色模块里面的基因太多，那么前期对表达矩阵挑选基因的步骤可能就不太合适。
 plotDendroAndColors(net$dendrograms[[1]], mergedColors[net$blockGenes[[1]]],
                     "Module colors",
                     dendroLabels = FALSE, hang = 0.03,
@@ -171,6 +173,8 @@ MEs = orderMEs(MEs0); ##不同颜色的模块的ME值矩 (样本vs模块)
 moduleTraitCor = cor(MEs, design , use = "p");
 moduleTraitPvalue = corPvalueStudent(moduleTraitCor, nSamples)
 
+# sizeGrWindow (width, height)
+# Opens a graphics window with specified dimensions
 sizeGrWindow(10,6)
 # Will display correlations and their p-values
 textMatrix = paste(signif(moduleTraitCor, 2), "\n(",
@@ -202,6 +206,8 @@ y=Luminal
 GS1=as.numeric(cor(y,datExpr, use="p"))
 GeneSignificance=abs(GS1)
 # Next module significance is defined as average gene significance.
+# tapply()用于将函数应用于由因子组合给出的向量子集
+# 即每个模块中与基因与luminal的相关系数ρ的平均数，此图中purple相关性最高（0.5968722）
 ModuleSignificance=tapply(GeneSignificance,
                           moduleColors, mean, na.rm=T)
 sizeGrWindow(8,7)
@@ -213,12 +219,13 @@ dev.off()
 
 # 6. 感兴趣性状的模块的具体基因分析
 # 首先计算模块与基因的相关性矩阵 
-# names (colors) of the modules
+# names (colors) of the modules，去掉你column中开头的“ME”字母
 modNames = substring(names(MEs), 3)
-geneModuleMembership = as.data.frame(cor(datExpr, MEs, use = "p"));
-## 算出每个模块跟基因的皮尔森相关系数矩阵
+## 算出每个模块跟基因表达的皮尔森相关系数
 ## MEs是每个模块在每个样本里面的值
 ## datExpr是每个基因在每个样本的表达量
+geneModuleMembership = as.data.frame(cor(datExpr, MEs, use = "p"));
+# Calculates Student asymptotic p-value for given correlations.
 MMPvalue = as.data.frame(corPvalueStudent(as.matrix(geneModuleMembership), nSamples));
 names(geneModuleMembership) = paste("MM", modNames, sep="");
 names(MMPvalue) = paste("p.MM", modNames, sep="");
@@ -234,7 +241,7 @@ names(geneTraitSignificance) = paste("GS.", names(Luminal), sep="");
 names(GSPvalue) = paste("p.GS.", names(Luminal), sep="");
 
 #最后把两个相关性矩阵联合起来,指定感兴趣模块进行分析 
-module = "brown"
+module = "purple"
 column = match(module, modNames);
 moduleGenes = moduleColors==module;
 sizeGrWindow(7, 7);
@@ -245,16 +252,190 @@ verboseScatterplot(abs(geneModuleMembership[moduleGenes, column]),
                    ylab = "Gene significance for Luminal",
                    main = paste("Module membership vs. gene significance\n"),
                    cex.main = 1.2, cex.lab = 1.2, cex.axis = 1.2, col = module)
+dev.off()
+
 
 # 7. 网络的可视化
+# 主要是可视化 TOM矩阵，WGCNA的标准配图
+# 然后可视化不同 模块 的相关性 热图
+# 不同模块的层次聚类图
+# 还有模块诊断，主要是 intramodular connectivity
+nGenes = ncol(datExpr)
+nSamples = nrow(datExpr)
+geneTree = net$dendrograms[[1]]; 
+dissTOM = 1-TOMsimilarityFromExpr(datExpr, power = 6); 
+plotTOM = dissTOM^7; 
+diag(plotTOM) = NA; 
+#TOMplot(plotTOM, geneTree, moduleColors, main = "Network heatmap plot, all genes")
+nSelect = 400
+# For reproducibility, we set the random seed
+set.seed(10);
+select = sample(nGenes, size = nSelect);
+selectTOM = dissTOM[select, select];
+# There’s no simple way of restricting a clustering tree to a subset of genes, so we must re-cluster.
+selectTree = hclust(as.dist(selectTOM), method = "average")
+selectColors = moduleColors[select];
+# Open a graphical window
+sizeGrWindow(9,9)
+# Taking the dissimilarity to a power, say 10, makes the plot more informative by effectively changing
+# the color palette; setting the diagonal to NA also improves the clarity of the plot
+plotDiss = selectTOM^7;
+diag(plotDiss) = NA;
 
+png("step7-Network-heatmap.png",width = 800,height = 600)
+TOMplot(plotDiss, selectTree, selectColors, main = "Network heatmap plot, selected genes")
+dev.off()
 
+# Recalculate module eigengenes
+MEs = moduleEigengenes(datExpr, moduleColors)$eigengenes
+## 只有连续型性状才能只有计算
+## 这里把是否属 Luminal 表型这个变量0,1进行数值化
+Luminal = as.data.frame(design[,3]);
+names(Luminal) = "Luminal"
+# Add the weight to existing module eigengenes
+MET = orderMEs(cbind(MEs, Luminal))
+# Plot the relationships among the eigengenes and the trait
+sizeGrWindow(5,7.5);
 
+par(cex = 0.9)
+png("step7-Eigengene-dendrogram.png",width = 800,height = 600)
+plotEigengeneNetworks(MET, "", marDendro = c(0,4,1,2), marHeatmap = c(3,4,1,2), cex.lab = 0.8, xLabelsAngle
+                      = 90)
+dev.off()
 
+# Plot the dendrogram
+sizeGrWindow(6,6);
+par(cex = 1.0)
+## 模块的进化树
+png("step7-Eigengene-dendrogram-hclust.png",width = 800,height = 600)
+plotEigengeneNetworks(MET, "Eigengene dendrogram", marDendro = c(0,4,2,0),
+                      plotHeatmaps = FALSE)
+dev.off()
+# Plot the heatmap matrix (note: this plot will overwrite the dendrogram plot)
+par(cex = 1.0)
+## 性状与模块热
 
+png("step7-Eigengene-adjacency-heatmap.png",width = 800,height = 600)
+plotEigengeneNetworks(MET, "Eigengene adjacency heatmap", marHeatmap = c(3,4,2,2),
+                      plotDendrograms = FALSE, xLabelsAngle = 90)
+dev.off()
 
+# 随机选取部分基因作图
+nSelect = 400
+# For reproducibility, we set the random seed
+set.seed(10);
+select = sample(nGenes, size = nSelect);
+selectTOM = dissTOM[select, select];
+# There’s no simple way of restricting a clustering tree to a subset of genes, so we must re-cluster.
+selectTree = hclust(as.dist(selectTOM), method = "average")
+selectColors = moduleColors[select];
+# Open a graphical window
+sizeGrWindow(9,9)
+# Taking the dissimilarity to a power, say 10, makes the plot more informative by effectively changing
+# the color palette; setting the diagonal to NA also improves the clarity of the plot
+plotDiss = selectTOM^7;
+diag(plotDiss) = NA;
+TOMplot(plotDiss, selectTree, selectColors, main = "Network heatmap plot, selected genes")
+dev.off()
 
+# 画模块与性状的关系
+# Recalculate module eigengenes
+MEs = moduleEigengenes(datExpr, moduleColors)$eigengenes
+## 只有连续型性状才能只有计算
+## 这里把是否属于 Luminal 表型这个变量用0,1进行数值化。
+Luminal = as.data.frame(design[,3]);
+names(Luminal) = "Luminal"
+# Add the weight to existing module eigengenes
+MET = orderMEs(cbind(MEs, Luminal))
+# Plot the relationships among the eigengenes and the trait
+sizeGrWindow(5,7.5);
+par(cex = 0.9)
+plotEigengeneNetworks(MET, "", marDendro = c(0,4,1,2), marHeatmap = c(3,4,1,2), cex.lab = 0.8, xLabelsAngle
+                      = 90)
+# Plot the dendrogram
+sizeGrWindow(6,6);
+par(cex = 1.0)
+## 模块的聚类图
+plotEigengeneNetworks(MET, "Eigengene dendrogram", marDendro = c(0,4,2,0),
+                      plotHeatmaps = FALSE)
+# Plot the heatmap matrix (note: this plot will overwrite the dendrogram plot)
+par(cex = 1.0)
+## 性状与模块热图
+plotEigengeneNetworks(MET, "Eigengene adjacency heatmap", marHeatmap = c(3,4,2,2),
+                      plotDendrograms = FALSE, xLabelsAngle = 90)
+dev.off()
 
+# 8. 提取指定模块的基因名
+# 主要是关心具体某个模块内部的基因
+# Select module
+module = "brown";
+# Select module probes
+probes = colnames(datExpr) ## 我们例子里面的probe就是基因
+inModule = (moduleColors==module);
+modProbes = probes[inModule]; 
+head(modProbes)
+
+# 如果使用WGCNA包自带的热图就很丑。
+which.module="brown";
+dat=datExpr[,moduleColors==which.module ] 
+plotMat(t(scale(dat)),nrgcols=30,rlabels=T,
+        clabels=T,rcols=which.module,
+        title=which.module )
+datExpr[1:4,1:4]
+dat=t(datExpr[,moduleColors==which.module ] )
+library(pheatmap)
+pheatmap(dat ,show_colnames =F,show_rownames = F) #对那些提取出来的1000个基因所在的每一行取出，组合起来为一个新的表达矩阵
+n=t(scale(t(log(dat+1)))) # 'scale'可以对log-ratio数值进行归一化
+n[n>2]=2 
+n[n< -2]= -2
+n[1:4,1:4]
+pheatmap(n,show_colnames =F,show_rownames = F)
+group_list=datTraits$subtype
+ac=data.frame(g=group_list)
+rownames(ac)=colnames(n) 
+pheatmap(n,show_colnames =F,show_rownames = F,
+         annotation_col=ac )
+# 可以很清晰的看到，所有的形状相关的模块基因
+# 其实未必就不是差异表达基因。
+dev.off()
+
+# 9.模块的导出
+# Recalculate topological overlap
+TOM = TOMsimilarityFromExpr(datExpr, power = 6); 
+# Select module
+module = "brown";
+# Select module probes
+probes = colnames(datExpr) ## 我们例子里面的probe就是基因名
+inModule = (moduleColors==module);
+modProbes = probes[inModule]; 
+## 也是提取指定模块的基因名
+# Select the corresponding Topological Overlap
+modTOM = TOM[inModule, inModule];
+dimnames(modTOM) = list(modProbes, modProbes)
+## 模块对应的基因关系矩阵 
+
+# 导出到VisANT
+vis = exportNetworkToVisANT(modTOM,
+                            file = paste("VisANTInput-", module, ".txt", sep=""),
+                            weighted = TRUE,
+                            threshold = 0)
+
+# 导出到cytoscape
+cyt = exportNetworkToCytoscape(
+        modTOM,
+        edgeFile = paste("CytoscapeInput-edges-", paste(module, collapse="-"), ".txt", sep=""),
+        nodeFile = paste("CytoscapeInput-nodes-", paste(module, collapse="-"), ".txt", sep=""),
+        weighted = TRUE,
+        threshold = 0.02,
+        nodeNames = modProbes, 
+        nodeAttr = moduleColors[inModule]
+)
+
+# 如果模块包含的基因太多，网络太复杂，还可以进行筛选，比如：
+nTop = 30;
+IMConn = softConnectivity(datExpr[, modProbes]);
+top = (rank(-IMConn) <= nTop)
+filter <- modTOM[top, top]
 
 
 
