@@ -1,0 +1,2 @@
+!/bin/bash
+mhcflurry-predict-scan A0A6B9V049.fasta --alleles HLA-A*11:01,HLA-A*02:01,HLA-A*01:01,HLA-A*03:01,HLA-A*24:02,HLA-B*44:03,HLA-B*07:02,HLA-B*08:01,HLA-B*44:02,HLA-B*44:03,HLA-B*35:01,HLA-C*03:04,HLA-C*04:01,HLA-C*05:01,HLA-C*06:02,HLA-C*07:01,HLA-C*07:02 --out mhcflurry_out.csv
