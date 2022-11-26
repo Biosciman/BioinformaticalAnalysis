@@ -2,13 +2,13 @@
 % 增加convolution1dLayer、reluLayer、maxPooling1dLayer
 clear;clc;close all;
 
-data = readmatrix('T6SS_Positive.txt')
-data2 = readmatrix('T6SS_Negative.txt')
-TotalData_X = [data; data2]
-a = linspace(1,1,414)
-b = linspace(2,2,1111)
-TotalData_Y = [a,b]
-TotalData_Y = categorical(TotalData_Y)'
+data = readmatrix('T6SS_Positive.txt');
+data2 = readmatrix('T6SS_Negative.txt');
+TotalData_X = [data; data2];
+a = linspace(1,1,414);
+b = linspace(2,2,1111);
+TotalData_Y = [a,b];
+TotalData_Y = categorical(TotalData_Y)';
 
 %% 切分训练集和测试集，70%为训练集
 dataNumber = size(TotalData_X,1); %%样本个数
@@ -27,11 +27,11 @@ YTrain = new_data_Y(testindex+1:end,:);
 
 
 
-XTrain = mat2cell(XTrain,linspace(1,1,size(TotalData_X,1)-testindex))
-XTest = mat2cell(XTest,linspace(1,1,testindex))
+XTrain = mat2cell(XTrain,linspace(1,1,size(TotalData_X,1)-testindex));
+XTest = mat2cell(XTest,linspace(1,1,testindex));
 
 
-miniBatchSize = 32
+miniBatchSize = 32;
 
 
 %% 定义 LSTM 网络架构
@@ -43,7 +43,7 @@ miniBatchSize = 32
 % 增加reluLayer，ReLU 层对输入的每个元素执行阈值运算，其中任何小于零的值都设置为零。
 % 增加maxPooling1dLayer
 
-inputSize = 1
+inputSize = 1;
 numHiddenUnits = 100;
 numClasses = 2;
 embeddingDimension = 21;
@@ -61,7 +61,7 @@ layers = [ ...
     lstmLayer(numHiddenUnits,OutputMode="last")
     fullyConnectedLayer(numClasses)
     softmaxLayer
-    classificationLayer]
+    classificationLayer];
 
 % 指定训练选项
 % 指定求解器为 "adam"，梯度阈值为 1，最大轮数为 50。optimizer
@@ -90,7 +90,7 @@ YPred = classify(net,XTest, ...
     SequenceLength="longest");
 
 % 计算预测值的分类准确度。
-acc = sum(YPred == YTest)./numel(YTest)
-acc
+acc = sum(YPred == YTest)./numel(YTest);
+acc;
 
 save('T6SS_LSTM_Model_V4.mat'); 
